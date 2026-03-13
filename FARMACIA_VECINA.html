@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FARMACIA VECINA | Monitoreo en Tiempo Real</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --essalud-blue: #0056b3;
+      --essalud-blue-dark: #003d82;
+      --essalud-blue-light: #e6f0fa;
+      --essalud-red: #c8102e;
+      --essalud-gray: #f5f7fa;
+      --essalud-text: #1a1a1a;
+      --live-green: #00d47a;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Roboto', 'Segoe UI', sans-serif;
+      background: var(--essalud-gray);
+      color: var(--essalud-text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER MEJORADO ===== */
+    .header {
+      background: linear-gradient(135deg, var(--essalud-blue) 0%, var(--essalud-blue-dark) 50%, #002a5c 100%);
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 86, 179, 0.3);
+      z-index: 100;
+      border-bottom: 4px solid var(--essalud-red);
+      height: 64px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: white;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      z-index: 1;
+    }
+
+    .header-subtitle {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.9);
+      font-weight: 400;
+      letter-spacing: 1px;
+      z-index: 1;
+      max-width: 600px;
+    }
+
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      z-index: 1;
+    }
+
+    /* STATUS BADGE - INFORMACIÓN EN TIEMPO REAL */
+    .status-badge {
+      background: rgba(0, 212, 122, 0.15);
+      padding: 10px 24px;
+      border-radius: 25px;
+      font-size: 0.85rem;
+      color: var(--live-green);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 2px solid var(--live-green);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 20px rgba(0, 212, 122, 0.3);
+      animation: borderGlow 2s ease-in-out infinite;
+    }
+
+    .status-badge::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      background: var(--live-green);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-out infinite;
+      box-shadow: 0 0 0 0 rgba(0, 212, 122, 0.7);
+    }
+
+    @keyframes borderGlow {
+      0%, 100% { 
+        box-shadow: 0 0 20px rgba(0, 212, 122, 0.3);
+        border-color: var(--live-green);
+      }
+      50% { 
+        box-shadow: 0 0 30px rgba(0, 212, 122, 0.5);
+        border-color: #00ff88;
+      }
+    }
+
+    @keyframes pulse {
+      0% { 
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(0, 212, 122, 0.7);
+      }
+      50% { 
+        transform: scale(1.2);
+        opacity: 0.8;
+        box-shadow: 0 0 0 10px rgba(0, 212, 122, 0);
+      }
+      100% { 
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(0, 212, 122, 0.7);
+      }
+    }
+
+    /* DATETIME BADGE - ESTILO ESSALUD LIMPIO */
+    .datetime-badge {
+      background: rgba(0, 61, 130, 0.6);
+      padding: 8px 20px;
+      border-radius: 8px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      border: 1px solid rgba(255,255,255,0.2);
+      min-width: 180px;
+    }
+
+    .datetime-badge .time {
+      font-size: 1.4rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .datetime-badge .date {
+      font-size: 0.75rem;
+      font-weight: 600;
+      opacity: 0.95;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ===== BOTONES DE CONTROL ===== */
+    .controls {
+      padding: 12px 24px;
+      background: white;
+      border-bottom: 2px solid #d0d8e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .btn-control {
+      padding: 10px 20px;
+      background: var(--essalud-blue);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(0, 86, 179, 0.3);
+    }
+
+    .btn-control:hover {
+      background: var(--essalud-blue-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 86, 179, 0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--essalud-blue);
+      color: var(--essalud-blue);
+    }
+
+    .btn-outline:hover {
+      background: var(--essalud-blue-light);
+    }
+
+    .panel-counter {
+      font-size: 0.9rem;
+      color: var(--essalud-text);
+      font-weight: 700;
+      background: var(--essalud-blue-light);
+      padding: 8px 16px;
+      border-radius: 6px;
+      border-left: 4px solid var(--essalud-blue);
+    }
+
+    /* ===== GRID DE VISORES ADAPTATIVO ===== */
+    .visor-container {
+      flex: 1;
+      padding: 12px;
+      overflow: hidden;
+      background: #e8ecf1;
+    }
+
+    .visor {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: 1fr;
+      gap: 12px;
+      height: 100%;
+      width: 100%;
+    }
+
+    .cuadro {
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #d0d8e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(0, 86, 179, 0.1);
+      position: relative;
+      min-height: 0;
+    }
+
+    .cuadro.hidden { display: none; }
+
+    .cuadro:hover {
+      border-color: var(--essalud-blue);
+      box-shadow: 0 8px 24px rgba(0, 86, 179, 0.25);
+      z-index: 10;
+      transform: translateY(-2px);
+    }
+
+    .cuadro::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--essalud-blue), var(--essalud-red));
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .cuadro:hover::before { opacity: 1; }
+
+    .titulo-panel {
+      background: linear-gradient(135deg, var(--essalud-blue-light), white);
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+      color: var(--essalud-blue-dark);
+      border-bottom: 2px solid #d0d8e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: relative;
+    }
+
+    .panel-actions {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .cuadro:hover .panel-actions { opacity: 1; }
+
+    .btn-action-panel {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1;
+      transition: var(--transition);
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .btn-maximize { background: var(--essalud-blue); }
+    .btn-maximize:hover {
+      background: var(--essalud-blue-dark);
+      transform: scale(1.15);
+    }
+
+    .btn-close { background: var(--essalud-red); }
+    .btn-close:hover {
+      background: #a00d26;
+      transform: scale(1.15);
+    }
+
+    .icon-badge {
+      width: 28px;
+      height: 28px;
+      background: var(--essalud-blue);
+      color: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Colores por panel */
+    .cuadro:nth-child(1) .icon-badge { background: #007bff; }
+    .cuadro:nth-child(2) .icon-badge { background: var(--essalud-blue); }
+
+    .contenido-iframe {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #fafbfc;
+      min-height: 0;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: white;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .header {
+        height: auto;
+        padding: 12px 16px;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .header h1 { font-size: 1.2rem; }
+      .header-subtitle { 
+        font-size: 0.65rem;
+        max-width: 100%;
+        text-align: center;
+      }
+      .header-info {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .datetime-badge {
+        min-width: auto;
+        flex: 1;
+        text-align: center;
+        align-items: center;
+      }
+      .controls {
+        flex-direction: column;
+        padding: 12px 16px;
+        gap: 12px;
+      }
+      .visor {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(2, auto);
+      }
+      .visor-container {
+        padding: 8px;
+        overflow-y: auto;
+      }
+      body {
+        overflow-y: auto;
+        height: auto;
+        min-height: 100vh;
+      }
+      .cuadro { min-height: 400px; }
+    }
+
+    /* ===== ANIMACIONES DE ENTRADA ===== */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .cuadro {
+      animation: slideIn 0.4s ease forwards;
+      opacity: 0;
+    }
+    .cuadro:nth-child(1) { animation-delay: 0.05s; }
+    .cuadro:nth-child(2) { animation-delay: 0.15s; }
+  </style>
+</head>
+<body>
+
+  <!-- Header corporativo EsSalud mejorado -->
+  <header class="header">
+    <div>
+      <h1>FARMACIA VECINA</h1>
+      <div class="header-subtitle">DESARROLLADO POR LA SUBGERENCIA DE ATENCIÓN AL ASEGURADO EN OTROS CANALES</div>
+    </div>
+    <div class="header-info">
+      <div class="status-badge">INFORMACIÓN EN TIEMPO REAL</div>
+      <div class="datetime-badge">
+        <div class="time" id="currentTime">--:--:--</div>
+        <div class="date" id="currentDate">CARGANDO...</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Controles -->
+  <div class="controls">
+    <button class="btn-control btn-outline" onclick="restaurarTodo()">↻ Restaurar Todos los Paneles</button>
+    <div class="panel-counter" id="panelCounter">2 PANELES VISIBLES</div>
+  </div>
+
+  <!-- Contenedor de visores -->
+  <div class="visor-container">
+    <div class="visor">
+      
+      <!-- Panel 1: APP MI CONSULTA -->
+      <div class="cuadro" id="panel-1" data-src="http://172.20.60.7:8080/TContactaUno/faces/queues/MonitoreoPerl.xhtml">
+        <div class="titulo-panel">
+          <span class="icon-badge">1</span>
+          App Mi Consulta
+          <div class="panel-actions">
+            <button class="btn-action-panel btn-maximize" onclick="maximizarPanel(1)" title="Maximizar">⛶</button>
+            <button class="btn-action-panel btn-close" onclick="ocultarPanel(1)" title="Ocultar">×</button>
+          </div>
+        </div>
+        <div class="contenido-iframe">
+          <iframe src="http://172.20.60.7:8080/TContactaUno/faces/queues/MonitoreoPerl.xhtml" loading="lazy" title="App Mi Consulta"></iframe>
+        </div>
+      </div>
+
+      <!-- Panel 2: FARMACIA VECINA -->
+      <div class="cuadro" id="panel-2" data-src="http://172.20.60.7:8080/TContactaUno/faces/queues/MonitoreoPerl.xhtml">
+        <div class="titulo-panel">
+          <span class="icon-badge">2</span>
+          Farmacia Vecina
+          <div class="panel-actions">
+            <button class="btn-action-panel btn-maximize" onclick="maximizarPanel(2)" title="Maximizar">⛶</button>
+            <button class="btn-action-panel btn-close" onclick="ocultarPanel(2)" title="Ocultar">×</button>
+          </div>
+        </div>
+        <div class="contenido-iframe">
+          <iframe src="http://172.20.60.7:8080/TContactaUno/faces/queues/MonitoreoPerl.xhtml" loading="lazy" title="Farmacia Vecina"></iframe>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ===== ACTUALIZACIÓN DE FECHA Y HORA =====
+    function updateDateTime() {
+      const now = new Date();
+      const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: '2-digit' };
+      
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString('es-PE', timeOptions);
+      document.getElementById('currentDate').textContent = now.toLocaleDateString('es-PE', dateOptions).toUpperCase();
+    }
+    
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // ===== FUNCIONES DE PANEL =====
+    function ocultarPanel(numero) {
+      const panel = document.getElementById(`panel-${numero}`);
+      if (panel) {
+        panel.classList.add('hidden');
+        actualizarContador();
+        ajustarGrid();
+      }
+    }
+
+    function maximizarPanel(numero) {
+      const panel = document.getElementById(`panel-${numero}`);
+      if (panel) {
+        const url = panel.getAttribute('data-src');
+        window.open(url, `_blank_panel_${numero}`, 'noopener,noreferrer,width=1200,height=800');
+      }
+    }
+
+    function restaurarTodo() {
+      for (let i = 1; i <= 2; i++) {
+        const panel = document.getElementById(`panel-${i}`);
+        if (panel) panel.classList.remove('hidden');
+      }
+      actualizarContador();
+      ajustarGrid();
+    }
+
+    // ===== AJUSTE DINÁMICO DEL GRID =====
+    function ajustarGrid() {
+      const visor = document.querySelector('.visor');
+      const panelesVisibles = document.querySelectorAll('.cuadro:not(.hidden)').length;
+      
+      if (panelesVisibles === 2) {
+        visor.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        visor.style.gridTemplateRows = '1fr';
+      } else {
+        visor.style.gridTemplateColumns = '1fr';
+        visor.style.gridTemplateRows = '1fr';
+      }
+    }
+
+    function actualizarContador() {
+      const visibles = document.querySelectorAll('.cuadro:not(.hidden)').length;
+      document.getElementById('panelCounter').textContent = `${visibles} PANEL${visibles === 1 ? '' : 'ES'} VISIBLE${visibles === 1 ? '' : 'S'}`;
+    }
+
+    // ===== MANEJO DE ERRORES EN IFRAMES =====
+    document.querySelectorAll('iframe').forEach(iframe => {
+      iframe.addEventListener('error', function() {
+        this.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#c8102e;font-weight:600;font-size:0.9rem;">⚠️ MÓDULO NO DISPONIBLE</div>';
+      });
+    });
+
+    // ===== INICIALIZACIÓN =====
+    actualizarContador();
+    ajustarGrid();
+    window.addEventListener('resize', ajustarGrid);
+  </script>
+
+</body>
+</html>
